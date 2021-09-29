@@ -1,7 +1,7 @@
 {
   "name": "vue-crossfire",
-  "version": "1.0.1",
-  "description": "Dead simple two-way Firestore syncing in Vue",
+  "version": "1.1.1",
+  "description": "Simple two-way Firestore syncing in Vue",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
