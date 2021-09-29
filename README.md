@@ -38,3 +38,5 @@ $ npm install vue-crossfire
   }
 </script>
 ```
+
+![Demo](https://media.giphy.com/media/FNrwm3rQaT90rw55I4/giphy.gif)
