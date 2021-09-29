@@ -14,5 +14,16 @@ $ npm install vue-crossfire
 ## Usage
 
 ```js
-const crossfire = require('crossfire')
+// Import crossfire and add into your component mixins
+const cf = require('crossfire')
+
+export default {
+	name: 'VueComponent',
+	mixins: [cf],
+	data () {
+		return {
+			firebaseRef: db.collection('todos').doc('1337')
+		}
+	},
+}
 ```
