@@ -3,7 +3,7 @@
 ![npm](https://img.shields.io/npm/v/vue-crossfire)
 ![npm bundle size](https://img.shields.io/bundlephobia/min/vue-crossfire)
 
-Dead simple two-way Firestore syncing in Vue
+Simple two-way Firestore syncing in Vue
 
 ## Install
 
@@ -11,7 +11,7 @@ Dead simple two-way Firestore syncing in Vue
 $ npm install vue-crossfire
 ```
 
-## Usage
+## Example Usage
 
 ```vue
 <template>
@@ -23,9 +23,10 @@ $ npm install vue-crossfire
 </template>
 
 <script>
-  // Import crossfire and add into your component mixins
   const cf = require('crossfire')
 
+  // Import crossfire into your mixins, pass a firestore reference into this.crossfire(),
+  // then simply read/write to the result as any regular object variable
   export default {
     name: 'VueComponent',
     mixins: [cf],
