@@ -23,7 +23,7 @@ $ npm install vue-crossfire
 </template>
 
 <script>
-  const cf = require('crossfire')
+  const cf = require('vue-crossfire')
 
   // Import crossfire into your mixins, pass a firestore reference into this.crossfire(),
   // then simply read/write to the result as any regular object variable
