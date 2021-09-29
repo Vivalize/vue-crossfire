@@ -14,16 +14,24 @@ $ npm install vue-crossfire
 ## Usage
 
 ```js
+<template>
+	<div v-if="liveDoc">
+		<h2>{{ liveDoc.title }}</h2>
+		<input v-model="liveDoc.text" label="Text">
+		<input type="checkbox" v-model="liveDoc.active" label="Active">
+	</div>
+</template>
+
 // Import crossfire and add into your component mixins
 const cf = require('crossfire')
 
 export default {
 	name: 'VueComponent',
 	mixins: [cf],
-	data () {
-		return {
-			firebaseRef: db.collection('todos').doc('1337')
-		}
+	computed: {
+		liveDoc: function () {
+			return this.crossfire(db.collection('someCollection').doc('docID'))
+		},
 	},
 }
 ```
