@@ -21,5 +21,8 @@
   "bugs": {
     "url": "https://github.com/Vivalize/vue-crossfire/issues"
   },
-  "homepage": "https://github.com/Vivalize/vue-crossfire#readme"
+  "homepage": "https://github.com/Vivalize/vue-crossfire#readme",
+  "dependencies": {
+    "vue": "^2.6.14"
+  }
 }
