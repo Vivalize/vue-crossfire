@@ -1,0 +1,25 @@
+{
+  "name": "vue-crossfire",
+  "version": "1.0.0",
+  "description": "Dead simple two-way Firestore syncing in Vue",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Vivalize/vue-crossfire.git"
+  },
+  "keywords": [
+    "firestore",
+    "firebase",
+    "vue",
+    "sync"
+  ],
+  "author": "Marko Ritachka",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Vivalize/vue-crossfire/issues"
+  },
+  "homepage": "https://github.com/Vivalize/vue-crossfire#readme"
+}
