@@ -25,13 +25,15 @@ $ npm install vue-crossfire
 // Import crossfire and add into your component mixins
 const cf = require('crossfire')
 
-export default {
-	name: 'VueComponent',
-	mixins: [cf],
-	computed: {
-		liveDoc: function () {
-			return this.crossfire(db.collection('someCollection').doc('docID'))
+<script>
+	export default {
+		name: 'VueComponent',
+		mixins: [cf],
+		computed: {
+			liveDoc: function () {
+				return this.crossfire(db.collection('someCollection').doc('docID'))
+			},
 		},
-	},
-}
+	}
+</script>
 ```
