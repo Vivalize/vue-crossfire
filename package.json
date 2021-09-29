@@ -17,7 +17,7 @@
     "sync"
   ],
   "author": "Marko Ritachka",
-  "license": "ISC",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/Vivalize/vue-crossfire/issues"
   },
