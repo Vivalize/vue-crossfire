@@ -13,7 +13,7 @@ $ npm install vue-crossfire
 
 ## Usage
 
-```js
+```vue
 <template>
   <div v-if="liveDoc">
     <h2>{{ liveDoc.title }}</h2>
@@ -22,7 +22,7 @@ $ npm install vue-crossfire
   </div>
 </template>
 
-<script>```js
+<script>
   // Import crossfire and add into your component mixins
   const cf = require('crossfire')
 
