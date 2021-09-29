@@ -1,16 +1,31 @@
 export default {
 	data () {
 		return {
-			listeners: {},
+			crossfireListeners: {},
 		}
 	},
 	methods: {
-		crossfire: function (reference, provideID) {
-			if (!reference) throw('No firebase reference provided')
+		// Returns the data located in Firestore at the passed in "reference" parameter
+		// This method is meant to be used reactively in Vue, as the returned result will
+		// change based on listening state (will return null on first call, but will return
+		// the actual data once the first request is completed). All data returned will be
+		// watched by Vue, so that if it is changed, it will be updated back in Firestore.
+		// Passing in a document reference will just return that document's data, but passing
+		// in a collection/query reference will return the resulting documents' data in an array
+		//
+		// Available options:
+		//		provideID:
+		//			Instead of just returning "data" for the document/documents,
+		//			it will return { id: <document ID>, data: <document data> }
+		//		transformUpdate:
+		//			When a document is about to be updated in firestore because of
+		//			local changes, this function will be run on the data first
+		crossfire: function (reference, options) {
+			if (!reference) return
 			const path = reference.path || reference._query.toString()
-			if (!this.listeners[path]) {
+			if (!this.crossfireListeners[path]) {
 				// Construct local data storage
-				this.$set(this.listeners, path, {
+				this.$set(this.crossfireListeners, path, {
 					doc: null,
 					data: null,
 					queryData: {},
@@ -21,30 +36,32 @@ export default {
 					skipUpdate: true,
 					type: reference._delegate.type,
 					listener: reference.onSnapshot(doc => {
+						// Ignore document updates triggered by the client
 						if (!doc.metadata.hasPendingWrites) {
 							if (reference._delegate.type === 'document') {
-								this.listeners[path].skipUpdate = true
-								this.listeners[path].doc = doc
-								this.listeners[path].data = doc.data()
+								this.crossfireListeners[path].skipUpdate = true
+								this.crossfireListeners[path].doc = doc
+								this.crossfireListeners[path].data = doc.data()
 							} else {
-								this.listeners[path].queryDocs = doc.docs
+								this.crossfireListeners[path].queryDocs = doc.docs
 								doc.docs.forEach(d => {
-									if (!this.listeners[path].queryDocWatchers[d.id]) {
+									if (!this.crossfireListeners[path].queryDocWatchers[d.id]) {
 										// Create watchers for query docs
-										this.$set(this.listeners[path].queryDocSkipUpdate, d.id, true)
-										this.$set(this.listeners[path].queryDocWatchers, d.id, this.$watch(
-											function () { return this.listeners[path].queryData[d.id] },
+										this.$set(this.crossfireListeners[path].queryDocSkipUpdate, d.id, true)
+										this.$set(this.crossfireListeners[path].queryDocWatchers, d.id, this.$watch(
+											function () { return this.crossfireListeners[path].queryData[d.id] },
 											function (val) {
-												if (!this.listeners[path].queryDocSkipUpdate[d.id]) {
-													console.log('updating document', d.id)
-													d.ref.update(this.listeners[path].queryData[d.id])
-												} else this.listeners[path].queryDocSkipUpdate[d.id] = false
+												if (!this.crossfireListeners[path].queryDocSkipUpdate[d.id]) {
+													let update = Object.assign({}, this.crossfireListeners[path].queryData[d.id])
+													if (options && options.transformUpdate) update = options.transformUpdate(update)
+													d.ref.update(update)
+												} else this.crossfireListeners[path].queryDocSkipUpdate[d.id] = false
 											},
 											{ deep: true }
 										))
 									}
-									this.listeners[path].queryDocSkipUpdate[d.id] = true
-									this.$set(this.listeners[path].queryData, d.id, d.data())
+									this.crossfireListeners[path].queryDocSkipUpdate[d.id] = true
+									this.$set(this.crossfireListeners[path].queryData, d.id, d.data())
 								})
 							}
 						}
@@ -52,21 +69,32 @@ export default {
 				})
 				
 				// Create watcher for document updates
-				this.$set(this.listeners[path], 'watcher', this.$watch(
-					function () { return this.listeners[path].data },
+				this.$set(this.crossfireListeners[path], 'watcher', this.$watch(
+					function () { return this.crossfireListeners[path].data },
 					function (val) {
-						if (!this.listeners[path].skipUpdate) {
-							this.listeners[path].ref.update(this.listeners[path].data)
-						} else this.listeners[path].skipUpdate = false
+						if (!this.crossfireListeners[path].skipUpdate) {
+							let update = Object.assign({}, this.crossfireListeners[path].data)
+							if (options && options.transformUpdate) update = options.transformUpdate(update)
+							this.crossfireListeners[path].ref.update(update)
+						} else this.crossfireListeners[path].skipUpdate = false
 					},
 					{ deep: true }
 				))
 			}
-			
-			if (this.listeners[path].type === 'document') return this.listeners[path].data
-			else {
-				if (provideID) return this.listeners[path].queryDocs.map(d => ({ id: d.id, data: this.listeners[path].queryData[d.id] }))
-				else return this.listeners[path].queryDocs.map(d => this.listeners[path].queryData[d.id])
+
+			// Return the firebase data associated with the passed reference
+			if (this.crossfireListeners[path].type === 'document') {
+				if (options && options.provideID) {
+					return { id: this.crossfireListeners[path].doc.id, data: this.crossfireListeners[path].data }
+				} else return this.crossfireListeners[path].data
+			} else {
+				if (options && options.provideID) {
+					return this.crossfireListeners[path].queryDocs.map(d => {
+						return { id: d.id, data: this.crossfireListeners[path].queryData[d.id] }
+					})
+				} else {
+					return this.crossfireListeners[path].queryDocs.map(d => this.crossfireListeners[path].queryData[d.id])
+				}
 			}
 		}
 	}
