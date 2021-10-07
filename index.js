@@ -54,7 +54,7 @@ export default {
 												if (!this.crossfireListeners[path].queryDocSkipUpdate[d.id]) {
 													let update = Object.assign({}, this.crossfireListeners[path].queryData[d.id])
 													if (options && options.transformUpdate) update = options.transformUpdate(update)
-													d.ref.update(update)
+													if (!(options && options.readOnly)) d.ref.update(update)
 												} else this.crossfireListeners[path].queryDocSkipUpdate[d.id] = false
 											},
 											{ deep: true }
@@ -75,7 +75,7 @@ export default {
 						if (!this.crossfireListeners[path].skipUpdate) {
 							let update = Object.assign({}, this.crossfireListeners[path].data)
 							if (options && options.transformUpdate) update = options.transformUpdate(update)
-							this.crossfireListeners[path].ref.update(update)
+							if (!(options && options.readOnly)) this.crossfireListeners[path].ref.update(update)
 						} else this.crossfireListeners[path].skipUpdate = false
 					},
 					{ deep: true }
