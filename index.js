@@ -36,26 +36,30 @@ export default {
 					skipUpdate: true,
 					type: reference._delegate.type,
 					listener: reference.onSnapshot(doc => {
+
 						// Ignore document updates triggered by the client
 						if (!doc.metadata.hasPendingWrites) {
+
+							// Setup single listener if reference is a document
 							if (reference._delegate.type === 'document') {
 								this.crossfireListeners[path].skipUpdate = true
 								this.crossfireListeners[path].doc = doc
 								this.crossfireListeners[path].data = doc.data()
-							} else {
+							}
+							
+							// If reference is a query or collection, setup listeners for every document within
+							else {
 								this.crossfireListeners[path].queryDocs = doc.docs
 								doc.docs.forEach(d => {
 									if (!this.crossfireListeners[path].queryDocWatchers[d.id]) {
-										// Create watchers for query docs
+
+										// Create watchers for every doc
 										this.$set(this.crossfireListeners[path].queryDocSkipUpdate, d.id, true)
 										this.$set(this.crossfireListeners[path].queryDocWatchers, d.id, this.$watch(
 											function () { return this.crossfireListeners[path].queryData[d.id] },
 											function (val) {
-												if (!this.crossfireListeners[path].queryDocSkipUpdate[d.id]) {
-													let update = Object.assign({}, this.crossfireListeners[path].queryData[d.id])
-													if (options && options.transformUpdate) update = options.transformUpdate(update)
-													if (!(options && options.readOnly)) d.ref.update(update)
-												} else this.crossfireListeners[path].queryDocSkipUpdate[d.id] = false
+												if (!this.crossfireListeners[path].queryDocSkipUpdate[d.id]) this.updateDoc(this.crossfireListeners[path].queryData[d.id], d.ref, options)
+												else this.crossfireListeners[path].queryDocSkipUpdate[d.id] = false
 											},
 											{ deep: true }
 										))
@@ -72,11 +76,8 @@ export default {
 				this.$set(this.crossfireListeners[path], 'watcher', this.$watch(
 					function () { return this.crossfireListeners[path].data },
 					function (val) {
-						if (!this.crossfireListeners[path].skipUpdate) {
-							let update = Object.assign({}, this.crossfireListeners[path].data)
-							if (options && options.transformUpdate) update = options.transformUpdate(update)
-							if (!(options && options.readOnly)) this.crossfireListeners[path].ref.update(update)
-						} else this.crossfireListeners[path].skipUpdate = false
+						if (!this.crossfireListeners[path].skipUpdate) this.updateDoc(this.crossfireListeners[path].data, this.crossfireListeners[path].ref, options)
+						else this.crossfireListeners[path].skipUpdate = false
 					},
 					{ deep: true }
 				))
@@ -96,6 +97,12 @@ export default {
 					return this.crossfireListeners[path].queryDocs.map(d => this.crossfireListeners[path].queryData[d.id])
 				}
 			}
-		}
+		},
+		// Function that handles updating a doc that's changed
+		updateDoc: function (data, ref, options) {
+			let update = Object.assign({}, data)
+			if (options && options.transformUpdate) update = options.transformUpdate(update)
+			if (!(options && options.readOnly)) ref.update(update)
+		},
 	}
 }
