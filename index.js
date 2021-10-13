@@ -100,9 +100,30 @@ export default {
 		},
 		// Function that handles updating a doc that's changed
 		updateDoc: function (data, ref, options) {
+			if (options && options.readOnly) return
 			let update = Object.assign({}, data)
 			if (options && options.transformUpdate) update = options.transformUpdate(update)
-			if (!(options && options.readOnly)) ref.update(update)
+			if (options && options.ignoreUnchangedFields) {
+				const keys = Object.keys(update)
+				keys.forEach(k => {
+					if (this.objectsAreEqual(update[k], data[k])) delete update[k]
+				})
+			}
+			return ref.update(update)
 		},
+		// Non-extensive object comparison function
+		objectsAreEqual(a, b) {
+			if (typeof a === 'object' && typeof b === 'object') {
+				const keys = [...new Set([...Object.keys(a), ...Object.keys(b)])]
+				for (var i = 0; i < keys.length; i++) {
+					if (!this.objectsAreEqual(a[keys[i]], b[keys[i]])) return false
+				}
+				return true
+			} else if (typeof a === 'object' || typeof b === 'object') {
+				return false
+			} else {
+				return a === b
+			}
+		}
 	}
 }
