@@ -111,13 +111,13 @@ export default {
 			if (options && options.readOnly) return
 			if (data === null) return
 			let update = JSON.parse(JSON.stringify(data))
-			if (options && options.transformUpdate) update = options.transformUpdate(update)
 			if (options && options.ignoreUnchangedFields) {
 				const keys = Object.keys(update)
 				keys.forEach(k => {
 					if (this.objectsAreEqual(update[k], oldData[k])) delete update[k]
 				})
 			}
+			if (options && options.transformUpdate) update = options.transformUpdate(update)
 			return ref.update(update)
 		},
 		// Non-extensive object comparison function
