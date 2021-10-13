@@ -38,17 +38,15 @@ export default {
 					skipUpdate: true,
 					type: reference._delegate.type,
 					listener: reference.onSnapshot(doc => {
+						// Ignore document updates triggered by the client
+						if (!doc.metadata.hasPendingWrites) {
 
-						// Setup single listener if reference is a document
+							// Setup single listener if reference is a document
 						if (reference._delegate.type === 'document') {
-							this.crossfireListeners[path].oldData = doc.data()
-
-							// Ignore document updates triggered by the client
-							if (!doc.metadata.hasPendingWrites) {
-								this.crossfireListeners[path].skipUpdate = true
-								this.crossfireListeners[path].doc = doc
-								this.crossfireListeners[path].data = doc.data()
-							}
+							this.crossfireListeners[path].skipUpdate = true
+							this.crossfireListeners[path].doc = doc
+							this.crossfireListeners[path].data = doc.data()
+							this.crossfireListeners[path].oldData = JSON.parse(JSON.stringify(doc.data()))
 						}
 						
 						// If reference is a query or collection, setup listeners for every document within
@@ -64,18 +62,18 @@ export default {
 										function (val) {
 											if (!this.crossfireListeners[path].queryDocSkipUpdate[d.id]) this.updateDoc(this.crossfireListeners[path].queryOldData[d.id], this.crossfireListeners[path].queryData[d.id], d.ref, options)
 											else this.crossfireListeners[path].queryDocSkipUpdate[d.id] = false
+											this.crossfireListeners[path].queryOldData[d.id] = JSON.parse(JSON.stringify(this.crossfireListeners[path].queryData[d.id]))
 										},
 										{ deep: true }
 									))
 								}
-								this.$set(this.crossfireListeners[path].queryOldData, d.id, d.data())
 
-								// Ignore document updates triggered by the client
-								if (!doc.metadata.hasPendingWrites) {
-									this.crossfireListeners[path].queryDocSkipUpdate[d.id] = true
-									this.$set(this.crossfireListeners[path].queryData, d.id, d.data())
-								}
+								
+								this.crossfireListeners[path].queryDocSkipUpdate[d.id] = true
+								this.$set(this.crossfireListeners[path].queryData, d.id, d.data())
+								this.$set(this.crossfireListeners[path].queryOldData, d.id, JSON.parse(JSON.stringify(d.data())))
 							})
+						}
 						}
 					}),
 				})
@@ -86,6 +84,7 @@ export default {
 					function (val) {
 						if (!this.crossfireListeners[path].skipUpdate) this.updateDoc(this.crossfireListeners[path].oldData, this.crossfireListeners[path].data, this.crossfireListeners[path].ref, options)
 						else this.crossfireListeners[path].skipUpdate = false
+						this.crossfireListeners[path].oldData = JSON.parse(JSON.stringify(this.crossfireListeners[path].data))
 					},
 					{ deep: true }
 				))
