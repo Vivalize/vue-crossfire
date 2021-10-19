@@ -25,7 +25,7 @@ Vue.use(Crossfire)
 
 This method returns the data at the respective Firestore reference, binded two-way. It will update reactively with any remote changes, and any local changes will be immedietly updated in Firestore. Returns **null** initially before the first update has been retrieved.
 
-```vue
+```js
 var documentSync = this.$crossfire(doc(db, 'docCollection', 'docID'))
 var collectionSync = this.$crossfire(collection(db, 'colletionName'), { readOnly: true })
 var querySync = this.$crossfire(query(collection(db, 'colletionName'), where('fieldID', '==', true)))
@@ -40,15 +40,23 @@ The method will return the data contained at that reference:
 The optional **options** object can be configured with the following fields:
 * * *
 provideID: *Boolean - default: false*
+
     If set to true, this method will return both the document data as well as the document ID(s)
     in the form: { id: *docID*, data: *docData* } instead of only returning the document data.
     In the case of collections or queries, it will return an array of objects in the above form.
+
 readOnly: *Boolean - default: false*
+
     If true, don't update firestore if the local data is changed
+
 ignoreUnchangedFields: *Boolean - default: false*
+
     When updating firestore docs, only update the specific fields that were changed in the data. This is slightly more computationally expensive, but is very useful when many users are editing a document at the same time and may overwrite data with their local state before they've received new changes
+
 transformUpdate: *function (changedData) - default undefined*
+
     Whenever a document is to be updated in firestore, the data to be saved will instead use the result of this function (if it's provided). Useful if you want to attach update metadata to the document (such as "dateModified" or "lastModifiedBy")
+    
 
 ## Example
 
