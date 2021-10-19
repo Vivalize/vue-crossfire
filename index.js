@@ -1,3 +1,5 @@
+import { updateDoc, onSnapshot } from 'firebase/firestore'
+
 export default {
 	data () {
 		return {
@@ -36,13 +38,13 @@ export default {
 					queryDocSkipUpdate: {},
 					ref: reference,
 					skipUpdate: true,
-					type: reference._delegate.type,
-					listener: reference.onSnapshot(doc => {
+					type: reference.type,
+					listener: onSnapshot(reference, doc => {
 						// Ignore document updates triggered by the client
 						if (!doc.metadata.hasPendingWrites) {
 
 							// Setup single listener if reference is a document
-						if (reference._delegate.type === 'document') {
+						if (reference.type === 'document') {
 							this.crossfireListeners[path].skipUpdate = true
 							this.crossfireListeners[path].doc = doc
 							this.crossfireListeners[path].data = doc.data()
@@ -60,7 +62,7 @@ export default {
 									this.$set(this.crossfireListeners[path].queryDocWatchers, d.id, this.$watch(
 										function () { return this.crossfireListeners[path].queryData[d.id] },
 										function (val) {
-											if (!this.crossfireListeners[path].queryDocSkipUpdate[d.id]) this.updateDoc(this.crossfireListeners[path].queryOldData[d.id], this.crossfireListeners[path].queryData[d.id], d.ref, options)
+											if (!this.crossfireListeners[path].queryDocSkipUpdate[d.id]) this.updateData(this.crossfireListeners[path].queryOldData[d.id], this.crossfireListeners[path].queryData[d.id], d.ref, options)
 											else this.crossfireListeners[path].queryDocSkipUpdate[d.id] = false
 											this.crossfireListeners[path].queryOldData[d.id] = JSON.parse(JSON.stringify(this.crossfireListeners[path].queryData[d.id]))
 										},
@@ -82,7 +84,7 @@ export default {
 				this.$set(this.crossfireListeners[path], 'watcher', this.$watch(
 					function () { return this.crossfireListeners[path].data },
 					function (val) {
-						if (!this.crossfireListeners[path].skipUpdate) this.updateDoc(this.crossfireListeners[path].oldData, this.crossfireListeners[path].data, this.crossfireListeners[path].ref, options)
+						if (!this.crossfireListeners[path].skipUpdate) this.updateData(this.crossfireListeners[path].oldData, this.crossfireListeners[path].data, this.crossfireListeners[path].ref, options)
 						else this.crossfireListeners[path].skipUpdate = false
 						this.crossfireListeners[path].oldData = JSON.parse(JSON.stringify(this.crossfireListeners[path].data))
 					},
@@ -106,7 +108,7 @@ export default {
 			}
 		},
 		// Function that handles updating a doc that's changed
-		updateDoc: function (oldData, data, ref, options) {
+		updateData: function (oldData, data, ref, options) {
 			if (options && options.readOnly) return
 			if (data === null) return
 			let update = JSON.parse(JSON.stringify(data))
@@ -117,7 +119,7 @@ export default {
 				})
 			}
 			if (options && options.transformUpdate) update = options.transformUpdate(update)
-			return ref.update(update)
+			return updateDoc(ref, update)
 		},
 		// Non-extensive object comparison function
 		objectsAreEqual(a, b) {
