@@ -39,6 +39,9 @@ The method will return the data contained at that reference:
 
 The optional **options** object can be configured with the following fields:
 * * *
+#### onError: *function (error) - default undefined*
+Callback for any errors that occur during document writes
+
 #### provideID: *Boolean - default: false*
 If set to true, this method will return both the document data as well as the document ID(s) in the form: { id: *docID*, data: *docData* } instead of only returning the document data. In the case of collections or queries, it will return an array of objects in the above form.
 

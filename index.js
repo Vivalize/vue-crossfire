@@ -1,7 +1,7 @@
 import { updateDoc, onSnapshot } from 'firebase/firestore'
 
 // Function that handles updating a doc that's changed
-function updateData (oldData, data, ref, onError, options) {
+function updateData (oldData, data, ref, options) {
 	if (options && options.readOnly) return
 	if (data === null) return
 	let update = JSON.parse(JSON.stringify(data))
@@ -12,7 +12,8 @@ function updateData (oldData, data, ref, onError, options) {
 		})
 	}
 	if (options && options.transformUpdate) update = options.transformUpdate(update)
-	return updateDoc(ref, update).catch(onError)
+	if (options && options.onUpdate) options.onUpdate(update, ref)
+	return updateDoc(ref, update).catch(options ? options.onError : null)
 }
 
 // Non-extensive object comparison function
@@ -67,7 +68,6 @@ export default {
 					queryOldData: {},
 					queryDocWatchers: {},
 					queryDocSkipUpdate: {},
-					errorHandler: options.onError || null,
 					ref: reference,
 					skipUpdate: true,
 					type: reference.type,
@@ -94,7 +94,7 @@ export default {
 									this.$set(cfData[path].queryDocWatchers, d.id, this.$watch(
 										function () { return cfData[path].queryData[d.id] },
 										function (val) {
-											if (!cfData[path].queryDocSkipUpdate[d.id]) updateData(cfData[path].queryOldData[d.id], cfData[path].queryData[d.id], d.ref, cfData[path].errorHandler, options)
+											if (!cfData[path].queryDocSkipUpdate[d.id]) updateData(cfData[path].queryOldData[d.id], cfData[path].queryData[d.id], d.ref, options)
 											else cfData[path].queryDocSkipUpdate[d.id] = false
 											cfData[path].queryOldData[d.id] = JSON.parse(JSON.stringify(cfData[path].queryData[d.id]))
 										},
@@ -116,7 +116,7 @@ export default {
 				this.$set(cfData[path], 'watcher', this.$watch(
 					function () { return cfData[path].data },
 					function (val) {
-						if (!cfData[path].skipUpdate) updateData(cfData[path].oldData, cfData[path].data, cfData[path].ref, cfData[path].errorHandler, options)
+						if (!cfData[path].skipUpdate) updateData(cfData[path].oldData, cfData[path].data, cfData[path].ref, options)
 						else cfData[path].skipUpdate = false
 						cfData[path].oldData = JSON.parse(JSON.stringify(cfData[path].data))
 					},
