@@ -75,41 +75,41 @@ export default {
 						// Ignore document updates triggered by the client
 						if (!doc.metadata.hasPendingWrites) {
 
-						// Setup single listener if reference is a document
-						if (reference.type === 'document') {
-							cfData[path].skipUpdate = true
-							cfData[path].doc = doc
-							cfData[path].data = doc.data()
-							cfData[path].oldData = JSON.parse(JSON.stringify(doc.data()))
-							if (options.onDownload) options.onDownload(doc)
-						}
-						
-						// If reference is a query or collection, setup listeners for every document within
-						else {
-							cfData[path].queryDocs = doc.docs
-							doc.docs.forEach(d => {
-								if (!cfData[path].queryDocWatchers[d.id]) {
+							// Setup single listener if reference is a document
+							if (reference.type === 'document') {
+								cfData[path].skipUpdate = true
+								cfData[path].doc = doc
+								cfData[path].data = doc.data()
+								cfData[path].oldData = JSON.parse(JSON.stringify(doc.data()))
+								if (options.onDownload) options.onDownload(doc)
+							}
+							
+							// If reference is a query or collection, setup listeners for every document within
+							else {
+								cfData[path].queryDocs = doc.docs
+								doc.docs.forEach(d => {
+									if (!cfData[path].queryDocWatchers[d.id]) {
 
-									// Create watchers for every doc
-									this.$set(cfData[path].queryDocSkipUpdate, d.id, true)
-									this.$set(cfData[path].queryDocWatchers, d.id, this.$watch(
-										function () { return cfData[path].queryData[d.id] },
-										function (val) {
-											if (!cfData[path].queryDocSkipUpdate[d.id]) updateData(cfData[path].queryOldData[d.id], cfData[path].queryData[d.id], d.ref, options)
-											else cfData[path].queryDocSkipUpdate[d.id] = false
-											cfData[path].queryOldData[d.id] = JSON.parse(JSON.stringify(cfData[path].queryData[d.id]))
-										},
-										{ deep: true }
-									))
-								}
+										// Create watchers for every doc
+										this.$set(cfData[path].queryDocSkipUpdate, d.id, true)
+										this.$set(cfData[path].queryDocWatchers, d.id, this.$watch(
+											function () { return cfData[path].queryData[d.id] },
+											function (val) {
+												if (!cfData[path].queryDocSkipUpdate[d.id]) updateData(cfData[path].queryOldData[d.id], cfData[path].queryData[d.id], d.ref, options)
+												else cfData[path].queryDocSkipUpdate[d.id] = false
+												cfData[path].queryOldData[d.id] = JSON.parse(JSON.stringify(cfData[path].queryData[d.id]))
+											},
+											{ deep: true }
+										))
+									}
 
-								
-								cfData[path].queryDocSkipUpdate[d.id] = true
-								this.$set(cfData[path].queryData, d.id, d.data())
-								this.$set(cfData[path].queryOldData, d.id, JSON.parse(JSON.stringify(d.data())))
-							})
-							if (options.onDownload) options.onDownload(docs)
-						}
+									
+									cfData[path].queryDocSkipUpdate[d.id] = true
+									this.$set(cfData[path].queryData, d.id, d.data())
+									this.$set(cfData[path].queryOldData, d.id, JSON.parse(JSON.stringify(d.data())))
+								})
+								if (options.onDownload) options.onDownload(docs)
+							}
 						}
 					}),
 				})
