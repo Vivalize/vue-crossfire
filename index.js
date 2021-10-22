@@ -81,6 +81,7 @@ export default {
 							cfData[path].doc = doc
 							cfData[path].data = doc.data()
 							cfData[path].oldData = JSON.parse(JSON.stringify(doc.data()))
+							if (options.onDownload) options.onDownload(doc)
 						}
 						
 						// If reference is a query or collection, setup listeners for every document within
@@ -107,6 +108,7 @@ export default {
 								this.$set(cfData[path].queryData, d.id, d.data())
 								this.$set(cfData[path].queryOldData, d.id, JSON.parse(JSON.stringify(d.data())))
 							})
+							if (options.onDownload) options.onDownload(docs)
 						}
 						}
 					}),
