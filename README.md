@@ -53,9 +53,6 @@ When updating firestore docs, only update the specific fields that were changed 
 
 #### transformUpdate: *function (changedData) - default undefined*
 Whenever a document is to be updated in firestore, the data to be saved will instead use the result of this function (if it's provided). Useful if you want to attach update metadata to the document (such as "dateModified" or "lastModifiedBy")
-
-#### resetWatchers: *Boolean - default: false*
-If true, all internal watchers (that check when to update Firestore data) will be re-initialized on every call to $crossfire() with the same reference. This is helpful if you're having issues with existing watchers being garbage collected in rare cases when the calling component is destroyed.
     
 
 ## Example

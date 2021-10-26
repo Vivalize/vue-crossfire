@@ -124,35 +124,7 @@ export default {
 					},
 					{ deep: true }
 				))
-			}
-
-			if (options.resetWatchers) {
-				// Reset watcher for document updates
-				if (cfData[path].watcher) cfData[path].watcher()
-				this.$set(cfData[path], 'watcher', this.$watch(
-					function () { return cfData[path].data },
-					function (val) {
-						if (!cfData[path].skipUpdate) updateData(cfData[path].oldData, cfData[path].data, cfData[path].ref, options)
-						else cfData[path].skipUpdate = false
-						cfData[path].oldData = JSON.parse(JSON.stringify(cfData[path].data))
-					},
-					{ deep: true }
-				))
-
-				// Reset watchers for query updates
-				cfData[path].queryDocs.forEach(d => {
-					if (cfData[path].queryDocWatchers[d.id]) cfData[path].queryDocWatchers[d.id]()
-					this.$set(cfData[path].queryDocWatchers, d.id, this.$watch(
-						function () { return cfData[path].queryData[d.id] },
-						function (val) {
-							if (!cfData[path].queryDocSkipUpdate[d.id]) updateData(cfData[path].queryOldData[d.id], cfData[path].queryData[d.id], d.ref, options)
-							else cfData[path].queryDocSkipUpdate[d.id] = false
-							cfData[path].queryOldData[d.id] = JSON.parse(JSON.stringify(cfData[path].queryData[d.id]))
-						},
-						{ deep: true }
-					))
-				})
-			}			
+			}	
 
 			// Return the firebase data associated with the passed reference
 			if (cfData[path].type === 'document') {
@@ -168,6 +140,40 @@ export default {
 					return cfData[path].queryDocs.map(d => cfData[path].queryData[d.id])
 				}
 			}
+		}
+
+		// Call this to reset the watchers for a given path
+		// Helpful in rare cases where original listeners get garbage-collected inadvertantly
+		Vue.prototype.$crossfireReset = function (reference, options) {
+			if (!reference) return
+			const path = getPath(reference)
+			if (!cfData[path]) return
+			
+			// Reset watcher for document updates
+			if (cfData[path].watcher) cfData[path].watcher()
+			this.$set(cfData[path], 'watcher', this.$watch(
+				function () { return cfData[path].data },
+				function (val) {
+					if (!cfData[path].skipUpdate) updateData(cfData[path].oldData, cfData[path].data, cfData[path].ref, options)
+					else cfData[path].skipUpdate = false
+					cfData[path].oldData = JSON.parse(JSON.stringify(cfData[path].data))
+				},
+				{ deep: true }
+			))
+
+			// Reset watchers for query updates
+			cfData[path].queryDocs.forEach(d => {
+				if (cfData[path].queryDocWatchers[d.id]) cfData[path].queryDocWatchers[d.id]()
+				this.$set(cfData[path].queryDocWatchers, d.id, this.$watch(
+					function () { return cfData[path].queryData[d.id] },
+					function (val) {
+						if (!cfData[path].queryDocSkipUpdate[d.id]) updateData(cfData[path].queryOldData[d.id], cfData[path].queryData[d.id], d.ref, options)
+						else cfData[path].queryDocSkipUpdate[d.id] = false
+						cfData[path].queryOldData[d.id] = JSON.parse(JSON.stringify(cfData[path].queryData[d.id]))
+					},
+					{ deep: true }
+				))
+			})
 		}
 	},
 }
