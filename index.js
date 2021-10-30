@@ -77,7 +77,7 @@ export default {
 
 							// Setup single listener if reference is a document
 							if (reference.type === 'document') {
-								if (options.onDownload) options.onDownload(doc)
+								if (options && options.onDownload) options.onDownload(doc)
 								cfData[path].skipUpdate = true
 								cfData[path].doc = doc
 								cfData[path].data = doc.data()
@@ -86,7 +86,7 @@ export default {
 							
 							// If reference is a query or collection, setup listeners for every document within
 							else {
-								if (options.onDownload) options.onDownload(docs)
+								if (options && options.onDownload) options.onDownload(docs)
 								cfData[path].queryDocs = doc.docs
 								doc.docs.forEach(d => {
 									if (!cfData[path].queryDocWatchers[d.id]) {
