@@ -36,7 +36,7 @@ function getPath (reference) {
 }
 
 export default {
-	install (Vue, options) {
+	install (Vue) {
 		const cfData = Vue.observable({})
 
 		// Returns the data located in Firestore at the passed in "reference" parameter
@@ -80,13 +80,13 @@ export default {
 								if (options && options.onDownload) options.onDownload(doc)
 								cfData[path].skipUpdate = true
 								cfData[path].doc = doc
-								cfData[path].data = doc.data()
-								cfData[path].oldData = JSON.parse(JSON.stringify(doc.data()))
+								cfData[path].data = doc.data() || null
+								cfData[path].oldData = JSON.parse(JSON.stringify(doc.data() || null))
 							}
 							
 							// If reference is a query or collection, setup listeners for every document within
 							else {
-								if (options && options.onDownload) options.onDownload(docs)
+								if (options && options.onDownload) options.onDownload(doc.docs)
 								cfData[path].queryDocs = doc.docs
 								doc.docs.forEach(d => {
 									if (!cfData[path].queryDocWatchers[d.id]) {
