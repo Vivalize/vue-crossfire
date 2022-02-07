@@ -1,6 +1,6 @@
 {
   "name": "vue-crossfire",
-  "version": "1.4.2",
+  "version": "1.4.3",
   "description": "Dead simple two-way Firestore syncing in Vue",
   "main": "index.js",
   "scripts": {
