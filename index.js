@@ -1,16 +1,33 @@
 import { updateDoc, onSnapshot } from 'firebase/firestore'
 
+// Generate Firebase update data that only updates changed fields of two objects
+// Changed object fields more than a level deep will be inserted in Firebase's <l1>.<l2>.<l3> subfield syntax
+function createDifferingUpdateData (oldData, newData) {
+	const updateData = {}
+	Object.keys(newData).forEach(k => {
+		if (!objectsAreEqual(oldData[k], newData[k])) {
+			if (typeof newData[k] === 'object') {
+				const subfields = createDifferingUpdateData(oldData[k], newData[k])
+				Object.keys(subfields).forEach(s => {
+					updateData[k + '.' + s] = subfields[s]
+				})
+			} else {
+				updateData[k] = newData[k]
+			}
+		}
+	})
+	return updateData
+}
+
 // Function that handles updating a doc that's changed
 function updateData (oldData, data, ref, options) {
 	if (options && options.readOnly) return
 	if (data === null) return
-	let update = JSON.parse(JSON.stringify(data))
-	if (options && options.ignoreUnchangedFields) {
-		const keys = Object.keys(update)
-		keys.forEach(k => {
-			if (objectsAreEqual(update[k], oldData[k])) delete update[k]
-		})
-	}
+
+	let update
+	if (options && options.ignoreUnchangedFields) update = createDifferingUpdateData(oldData, data)
+	else update = JSON.parse(JSON.stringify(data))
+
 	if (options && options.transformUpdate) update = options.transformUpdate(update)
 	if (options && options.onUpdate) options.onUpdate(update, ref)
 	return updateDoc(ref, update).catch(options ? options.onError : null)
