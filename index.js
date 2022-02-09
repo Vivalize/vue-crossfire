@@ -5,8 +5,8 @@ import { updateDoc, onSnapshot } from 'firebase/firestore'
 function createDifferingUpdateData (oldData, newData) {
 	const updateData = {}
 	Object.keys(newData).forEach(k => {
-		if (!oldData || !newData || !objectsAreEqual(oldData[k], newData[k])) {
-			if (typeof newData[k] === 'object' && !Array.isArray(newData[k])) {
+		if (!objectsAreEqual(oldData[k], newData[k])) {
+			if (oldData[k] && newData[k] && typeof newData[k] === 'object' && !Array.isArray(newData[k])) {
 				const subfields = createDifferingUpdateData(oldData[k], newData[k])
 				Object.keys(subfields).forEach(s => {
 					updateData[k + '.' + s] = subfields[s]
