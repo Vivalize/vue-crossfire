@@ -87,11 +87,11 @@ export default {
 					queryDocSkipUpdate: {},
 					ref: reference,
 					skipUpdate: true,
-					skipDownload: false,
+					downloadSkips: 0,
 					type: reference.type,
 					listener: onSnapshot(reference, doc => {
 						// Ignore document updates triggered by the client
-						if (!cfData[path].skipDownload) {
+						if (cfData[path].downloadSkips <= 0) {
 
 							// Setup single listener if reference is a document
 							if (reference.type === 'document') {
@@ -115,7 +115,7 @@ export default {
 											function () { return cfData[path].queryData[d.id] },
 											function (val) {
 												if (!cfData[path].queryDocSkipUpdate[d.id]) {
-													cfData[path].skipDownload = true
+													cfData[path].downloadSkips++
 													updateData(cfData[path].queryOldData[d.id], cfData[path].queryData[d.id], d.ref, options)
 												} else cfData[path].queryDocSkipUpdate[d.id] = false
 												cfData[path].queryOldData[d.id] = JSON.parse(JSON.stringify(cfData[path].queryData[d.id]))
@@ -130,7 +130,7 @@ export default {
 									this.$set(cfData[path].queryOldData, d.id, JSON.parse(JSON.stringify(d.data())))
 								})
 							}
-						} else cfData[path].skipDownload = false
+						} else cfData[path].downloadSkips--
 					}),
 				})
 				
@@ -139,7 +139,7 @@ export default {
 					function () { return cfData[path].data },
 					function (val) {
 						if (!cfData[path].skipUpdate) {
-							cfData[path].skipDownload = true
+							cfData[path].downloadSkips++
 							updateData(cfData[path].oldData, cfData[path].data, cfData[path].ref, options)
 						} else cfData[path].skipUpdate = false
 						cfData[path].oldData = JSON.parse(JSON.stringify(cfData[path].data))
@@ -177,7 +177,7 @@ export default {
 				function () { return cfData[path].data },
 				function (val) {
 					if (!cfData[path].skipUpdate) {
-						cfData[path].skipDownload = true
+						cfData[path].downloadSkips++
 						updateData(cfData[path].oldData, cfData[path].data, cfData[path].ref, options)
 					} else cfData[path].skipUpdate = false
 					cfData[path].oldData = JSON.parse(JSON.stringify(cfData[path].data))
@@ -192,7 +192,7 @@ export default {
 					function () { return cfData[path].queryData[d.id] },
 					function (val) {
 						if (!cfData[path].queryDocSkipUpdate[d.id]) {
-							cfData[path].skipDownload = true
+							cfData[path].downloadSkips++
 							updateData(cfData[path].queryOldData[d.id], cfData[path].queryData[d.id], d.ref, options)
 						} else cfData[path].queryDocSkipUpdate[d.id] = false
 						cfData[path].queryOldData[d.id] = JSON.parse(JSON.stringify(cfData[path].queryData[d.id]))
