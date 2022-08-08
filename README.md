@@ -13,22 +13,27 @@ Works with projects built with Firebase V9 and Vue 2
 $ npm install vue-crossfire
 ```
 
-Then when initializing your Vue app:
-```vue
-import Crossfire from 'vue-crossfire'
-Vue.use(Crossfire)
-```
-
 ## Usage
 
-#### $crossfire( firestoreReference[, options ] )
+```js
+import Crossfire from 'vue-crossfire'
 
-This method returns the data at the respective Firestore reference, binded two-way. It will update reactively with any remote changes, and any local changes will be immedietly updated in Firestore. Returns **null** initially before the first update has been retrieved.
+const firestoreDoc = new Crossfire(firestoreReference[, options ])
+```
+
+## Constructors
+#### Crossfire( firestoreReference[, options ] )
+
+This returns a live snapshot of the provided Firestore reference, structured identially to a snapshot you would receive from a normal Firestore ```onSnapshot()``` method. Single document data is still accessed with .data(), and query/collection doc data is still accessed at .docs[x].data().
+
+Every instance of document data is binded two way. Mutating the document data will instantly update it in Firestore as well. (Before the initial snapshot of the reference is received, .data() and .docs will be undefined. You can access .loading to see if the initial state has been received yet). Any remote changes to the data in Firestore will instantly update the local object as well.
 
 ```js
-var documentSync = this.$crossfire(doc(db, 'docCollection', 'docID'))
-var collectionSync = this.$crossfire(collection(db, 'colletionName'), { readOnly: true })
-var querySync = this.$crossfire(query(collection(db, 'colletionName'), where('fieldID', '==', true)))
+import crossfire from 'vue-crossfire'
+
+const documentSync = crossfire(doc(db, 'docCollection', 'docID'))
+const collectionSync = crossfire(collection(db, 'colletionName'), { readOnly: true })
+const querySync = crossfire(query(collection(db, 'colletionName'), where('fieldID', '==', true)))
 ```
 
 **firestoreReference** is a reference to a Firestore V9 document, collection, or query
@@ -41,9 +46,6 @@ The optional **options** object can be configured with the following fields:
 * * *
 #### onError: *function (error) - default undefined*
 Callback for any errors that occur during document writes
-
-#### provideID: *Boolean - default: false*
-If set to true, this method will return both the document data as well as the document ID(s) in the form: { id: *docID*, data: *docData* } instead of only returning the document data. In the case of collections or queries, it will return an array of objects in the above form.
 
 #### readOnly: *Boolean - default: false*
 If true, don't update firestore if the local data is changed
@@ -59,27 +61,45 @@ Whenever a document is to be updated in firestore, the data to be saved will ins
 
 ```vue
 <template>
-  <div v-if="liveDoc">
-    <h2>{{ liveDoc.title }}</h2>
-    <input v-model="liveDoc.text" label="Text">
-    <input type="checkbox" v-model="liveDoc.active" label="Active">
+  <div>
+    <h1>Single Document Syncing</h1>
+    <div v-if="docSync.data()">
+      <h2>{{ docSync.data().title }}</h2>
+      <input v-model="docSync.data().text" label="Text">
+      <input type="checkbox" v-model="docSync.data().active" label="Active">
+    </div>
+    
+    <h1>Collection/Query Syncing</h1>
+    <div v-if="querySync.docs">
+      <div v-for="doc in querySync.docs" :key="doc.id">
+        <h2>{{ doc.data().title }}</h2>
+        <input v-model="doc.data().text" label="Text">
+        <input type="checkbox" v-model="doc.data().active" label="Active">
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
   import { doc } from 'firebase/firestore'
 
-  // Pass a firestore reference into $crossfire(),
-  // then simply read/write to the result as any regular object variable
+  // Pass a firestore reference into crossfire(),
+  // then simply read/write to the resulting snapshot as any regular object variable
   export default {
     name: 'VueComponent',
-    computed: {
-      liveDoc: function () {
-        return this.$crossfire(doc(db, 'someCollection', 'docID'))
-      },
+    data: function () {
+      return {
+        docSync: null,
+        querySync: null,
+      }
+    }
+    created: function () {
+      this.docSync = crossfire(doc(db, 'someCollection', 'docID'))
+      this.querySync = crossfire(query(collection(db, 'someCollection'), where('author', '==', 'uuid')))
     },
   }
 </script>
 ```
 
 ![Demo](https://media.giphy.com/media/FNrwm3rQaT90rw55I4/giphy.gif)
+    
