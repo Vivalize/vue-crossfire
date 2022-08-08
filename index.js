@@ -1,205 +1,299 @@
+import Vue from 'vue'
 import { updateDoc, onSnapshot } from 'firebase/firestore'
 
 // Generate Firebase update data that only updates changed fields of two objects
 // Changed object fields more than a level deep will be inserted in Firebase's <l1>.<l2>.<l3> subfield syntax
 function createDifferingUpdateData (oldData, newData) {
-	const updateData = {}
-	Object.keys(newData).forEach(k => {
-		if (!objectsAreEqual(oldData[k], newData[k])) {
-			if (oldData[k] && newData[k] && typeof newData[k] === 'object' && !Array.isArray(newData[k])) {
-				const subfields = createDifferingUpdateData(oldData[k], newData[k])
-				Object.keys(subfields).forEach(s => {
-					updateData[k + '.' + s] = subfields[s]
-				})
-			} else {
-				updateData[k] = newData[k]
-			}
-		}
-	})
-	return updateData
-}
-
-// Function that handles updating a doc that's changed
-function updateData (oldData, data, ref, options) {
-	if (options && options.readOnly) return
-	if (data === null) return
-
-	let update
-	if (options && options.ignoreUnchangedFields) update = createDifferingUpdateData(oldData, data)
-	else update = JSON.parse(JSON.stringify(data))
-
-	if (options && options.transformUpdate) update = options.transformUpdate(update)
-	if (options && options.onUpdate) options.onUpdate(update, ref)
-	return updateDoc(ref, update).catch(options ? options.onError : null)
+  const updateData = {}
+  Object.keys(newData).forEach(k => {
+    if (!objectsAreEqual(oldData[k], newData[k])) {
+      if (oldData[k] && newData[k] && typeof newData[k] === 'object' && !Array.isArray(newData[k])) {
+        const subfields = createDifferingUpdateData(oldData[k], newData[k])
+        Object.keys(subfields).forEach(s => {
+          updateData[k + '.' + s] = subfields[s]
+        })
+      } else {
+        updateData[k] = newData[k]
+      }
+    }
+  })
+  return updateData
 }
 
 // Non-extensive object comparison function
 function objectsAreEqual (a, b) {
-	if ((a !== null && typeof a === 'object') && (b !== null && typeof b === 'object')) {
-		const keys = [...new Set([...Object.keys(a), ...Object.keys(b)])]
-		for (var i = 0; i < keys.length; i++) {
-			if (!objectsAreEqual(a[keys[i]], b[keys[i]])) return false
-		}
-		return true
-	} else if ((a !== null && typeof a === 'object') || (b !== null && typeof b === 'object')) {
-		return false
-	} else {
-		return a === b
-	}
+  if ((a !== null && typeof a === 'object') && (b !== null && typeof b === 'object')) {
+    const keys = [...new Set([...Object.keys(a), ...Object.keys(b)])]
+    for (var i = 0; i < keys.length; i++) {
+      if (!objectsAreEqual(a[keys[i]], b[keys[i]])) return false
+    }
+    return true
+  } else if ((a !== null && typeof a === 'object') || (b !== null && typeof b === 'object')) {
+    return false
+  } else {
+    return a === b
+  }
 }
 
-function getPath (reference) {
-	return reference.path || reference._query.toString()
+// Deep copy an object
+function deepCopy (obj) {
+  if (typeof obj !== 'object') return obj
+  return JSON.parse(JSON.stringify(obj))
 }
 
-export default {
-	install (Vue) {
-		const cfData = Vue.observable({})
+// Function that handles updating a doc that's changed
+function updateData (reference, data, oldData, options) {
+  if (options.readOnly) return
+  if (!data) return
 
-		// Returns the data located in Firestore at the passed in "reference" parameter
-		// This method is meant to be used reactively in Vue, as the returned result will
-		// change based on listening state (will return null on first call, but will return
-		// the actual data once the first request is completed). All data returned will be
-		// watched by Vue, so that if it is changed, it will be updated back in Firestore.
-		// Passing in a document reference will just return that document's data, but passing
-		// in a collection/query reference will return the resulting documents' data in an array
-		//
-		// Available options:
-		//		provideID:
-		//			Instead of just returning "data" for the document/documents,
-		//			it will return { id: <document ID>, data: <document data> }
-		//		transformUpdate:
-		//			When a document is about to be updated in firestore because of
-		//			local changes, this function will be run on the data first
-		Vue.prototype.$crossfire = function (reference, options) {
-			if (!reference) return
-			const path = getPath(reference)
-			if (!cfData[path]) {
-				// Construct local data storage
-				this.$set(cfData, path, {
-					doc: null,
-					data: null,
-					oldData: null,
-					queryDocs: [],
-					queryData: {},
-					queryOldData: {},
-					queryDocWatchers: {},
-					queryDocSkipUpdate: {},
-					ref: reference,
-					skipUpdate: true,
-					downloadSkips: 0,
-					type: reference.type,
-					listener: onSnapshot(reference, doc => {
-						// Ignore document updates triggered by the client
-						if (cfData[path].downloadSkips <= 0) {
+  // Create update data
+  let update = options.ignoreUnchangedFields ? createDifferingUpdateData(oldData, data) : deepCopy(data)
+  if (options.transformUpdate) update = options.transformUpdate(update)
 
-							// Setup single listener if reference is a document
-							if (reference.type === 'document') {
-								if (options && options.onDownload) options.onDownload(doc)
-								cfData[path].skipUpdate = true
-								cfData[path].doc = doc
-								cfData[path].data = doc.data() || null
-								cfData[path].oldData = JSON.parse(JSON.stringify(doc.data() || null))
-							}
-							
-							// If reference is a query or collection, setup listeners for every document within
-							else {
-								if (options && options.onDownload) options.onDownload(doc.docs)
-								cfData[path].queryDocs = doc.docs
-								doc.docs.forEach(d => {
-									if (!cfData[path].queryDocWatchers[d.id]) {
+  // Update the doc
+  if (options.onUpdate) options.onUpdate(update, reference)
+  return updateDoc(reference, update).catch(options.onError)
+}
 
-										// Create watchers for every doc
-										this.$set(cfData[path].queryDocSkipUpdate, d.id, true)
-										this.$set(cfData[path].queryDocWatchers, d.id, this.$watch(
-											function () { return cfData[path].queryData[d.id] },
-											function (val) {
-												if (!cfData[path].queryDocSkipUpdate[d.id]) {
-													cfData[path].downloadSkips++
-													updateData(cfData[path].queryOldData[d.id], cfData[path].queryData[d.id], d.ref, options)
-												} else cfData[path].queryDocSkipUpdate[d.id] = false
-												cfData[path].queryOldData[d.id] = JSON.parse(JSON.stringify(cfData[path].queryData[d.id]))
-											},
-											{ deep: true }
-										))
-									}
+class Crossfire {
+  constructor (reference, options) {
+    this._vue = new Vue({
+      data: function () {
+        return {
+          data: undefined,
+          id: undefined,
+          metadata: undefined,
+          error: undefined,
+          loading: true,
+          exists: undefined,
+          oldData: undefined,
+          listener: null,
+          skipUpdate: true,
+          downloadSkips: 0,
+          reference,
+          options: options || {},
+        }
+      },
+      watch: {
+        reference: {
+          immediate: true,
+          handler: function (val) {
+            // Reset data
+            this.data = undefined
+            this.id = undefined
+            this.metadata = undefined
+            this.error = undefined
+            this.loading = undefined
+            this.exists = undefined
 
-									
-									cfData[path].queryDocSkipUpdate[d.id] = true
-									this.$set(cfData[path].queryData, d.id, d.data())
-									this.$set(cfData[path].queryOldData, d.id, JSON.parse(JSON.stringify(d.data())))
-								})
-							}
-						} else cfData[path].downloadSkips--
-					}),
-				})
-				
-				// Create watcher for document updates
-				this.$set(cfData[path], 'watcher', this.$watch(
-					function () { return cfData[path].data },
-					function (val) {
-						if (!cfData[path].skipUpdate) {
-							cfData[path].downloadSkips++
-							updateData(cfData[path].oldData, cfData[path].data, cfData[path].ref, options)
-						} else cfData[path].skipUpdate = false
-						cfData[path].oldData = JSON.parse(JSON.stringify(cfData[path].data))
-					},
-					{ deep: true }
-				))
-			}	
+            // Reset listener and helpers
+            this.oldData = undefined
+            this.skipUpdate = true
+            this.downloadSkips = 0
+            if (this.listener) this.listener()
 
-			// Return the firebase data associated with the passed reference
-			if (cfData[path].type === 'document') {
-				if (options && options.provideID) {
-					return { id: cfData[path].doc.id, data: cfData[path].data }
-				} else return cfData[path].data
-			} else {
-				if (options && options.provideID) {
-					return cfData[path].queryDocs.map(d => {
-						return { id: d.id, data: cfData[path].queryData[d.id] }
-					})
-				} else {
-					return cfData[path].queryDocs.map(d => cfData[path].queryData[d.id])
-				}
-			}
-		}
+            // Start listening
+            this.listener = onSnapshot(val, this.handleNewData, this.handleError)
+          }
+        },
+        data: {
+          immediate: true,
+          deep: true,
+          handler: function (data) {
+            if (!this.skipUpdate) {
+              this.downloadSkips++
+              updateData(this.reference, this.data, this.oldData, this.options)
+            } else this.skipUpdate = false
+            this.oldData = deepCopy(data)
+          },
+        },
+      },
+      destroyed () {
+        if (this.listener) this.listener()
+      },
+      methods: {
+        // Handle data listening errors
+        handleError: function (error) {
+          this.data = undefined
+          this.id = undefined
+          this.metadata = undefined
+          this.error = error
+          this.loading = false
+          this.exists = undefined
+        },
 
-		// Call this to reset the watchers for a given path
-		// Helpful in rare cases where original listeners get garbage-collected inadvertantly
-		Vue.prototype.$crossfireReset = function (reference, options) {
-			if (!reference) return
-			const path = getPath(reference)
-			if (!cfData[path]) return
-			
-			// Reset watcher for document updates
-			if (cfData[path].watcher) cfData[path].watcher()
-			this.$set(cfData[path], 'watcher', this.$watch(
-				function () { return cfData[path].data },
-				function (val) {
-					if (!cfData[path].skipUpdate) {
-						cfData[path].downloadSkips++
-						updateData(cfData[path].oldData, cfData[path].data, cfData[path].ref, options)
-					} else cfData[path].skipUpdate = false
-					cfData[path].oldData = JSON.parse(JSON.stringify(cfData[path].data))
-				},
-				{ deep: true }
-			))
+        // Handle new incoming data from firebase
+        handleNewData: function (snap) {
+          // Ignore document updates triggered by the client
+          if (this.downloadSkips <= 0) {
+            if (this.options.onDownload) this.options.onDownload(snap)
+            this.skipUpdate = true
 
-			// Reset watchers for query updates
-			cfData[path].queryDocs.forEach(d => {
-				if (cfData[path].queryDocWatchers[d.id]) cfData[path].queryDocWatchers[d.id]()
-				this.$set(cfData[path].queryDocWatchers, d.id, this.$watch(
-					function () { return cfData[path].queryData[d.id] },
-					function (val) {
-						if (!cfData[path].queryDocSkipUpdate[d.id]) {
-							cfData[path].downloadSkips++
-							updateData(cfData[path].queryOldData[d.id], cfData[path].queryData[d.id], d.ref, options)
-						} else cfData[path].queryDocSkipUpdate[d.id] = false
-						cfData[path].queryOldData[d.id] = JSON.parse(JSON.stringify(cfData[path].queryData[d.id]))
-					},
-					{ deep: true }
-				))
-			})
-		}
-	},
+            // Update resultant data
+            this.data = snap.data() || null
+            this.id = snap.id
+            this.metadata = snap.metadata
+            this.error = undefined
+            this.loading = false
+            this.exists = snap.exists
+
+            // Keep track of old data for future comparisons
+            this.oldData = deepCopy(this.data)
+          } else this.downloadSkips--
+        },
+      },
+    })
+  }
+
+  get metadata () {
+    return this._vue.metadata
+  }
+
+  get data () {
+    return function () {
+      return this._vue.data
+    }
+  }
+
+  get flata () {
+    return this._vue.data
+  }
+
+  destroy () {
+    this._vue.$destroy()
+  }
+}
+
+class CrossfireQuery {
+  constructor (reference, options) {
+    this._vue = new Vue({
+      data: function () {
+        return {
+          ids: null,
+          data: {},
+          oldData: {},
+          metadata: {},
+          watchers: {},
+          references: {},
+          error: undefined,
+          loading: true,
+          listener: null,
+          skipUpdate: true,
+          downloadSkips: 0,
+          reference,
+          options: options || {},
+        }
+      },
+      watch: {
+        reference: {
+          immediate: true,
+          handler: function (val) {
+            // Reset data
+            this.resetDocs()
+            this.error = undefined
+            this.loading = true
+
+            // Reset listener and helpers
+            this.skipUpdate = true
+            this.downloadSkips = 0
+            if (this.listener) this.listener()
+
+            // Start listening
+            this.listener = onSnapshot(val, this.handleNewData, this.handleError)
+          }
+        },
+      },
+      destroyed () {
+        if (this.listener) this.listener()
+      },
+      methods: {
+        resetDocs: function () {
+          Object.values(this.watchers).forEach(watcher => watcher())
+          this.ids = null
+          this.data = {}
+          this.oldData = {}
+          this.metadata = {}
+          this.watchers = {}
+          this.references = {}
+        },
+
+        // Handle data listening errors
+        handleError: function (error) {
+          this.resetDocs()
+          this.error = error
+          this.loading = false
+        },
+
+        // Handle new incoming data from firebase
+        handleNewData: function (snap) {
+          // Ignore document updates triggered by the client
+          if (this.downloadSkips <= 0) {
+            if (this.options.onDownload) this.options.onDownload(snap)
+            this.skipUpdate = true
+
+            this.ids = snap.docs.map(doc => doc.id)
+            this.error = undefined
+            this.loading = false
+
+            // Keep track of individual documents
+            snap.docChanges().forEach((change) => {
+              if (change.type === "added") {
+                this.$set(this.data, change.doc.id, change.doc.data() || null)
+                this.$set(this.oldData, change.doc.id, deepCopy(this.data[change.doc.id]))
+                this.$set(this.metadata, change.doc.id, change.doc.metadata)
+                this.$set(this.references, change.doc.id, change.doc.ref)
+                this.$set(this.watchers, change.doc.id, this.$watch(
+                  'data.' + change.doc.id,
+                  function (val) {
+                    if (!this.skipUpdate) {
+                      this.downloadSkips++
+                      updateData(this.references[change.doc.id], this.data[change.doc.id], this.oldData[change.doc.id], this.options)
+                    } else this.skipUpdate = false
+                    this.oldData[change.doc.id] = deepCopy(val)
+                  },
+                  { deep: true },
+                ))
+              }
+              if (change.type === "modified") {
+                this.data[change.doc.id] = change.doc.data() || null
+                this.oldData[change.doc.id] = deepCopy(this.data[change.doc.id])
+                this.metadata[change.doc.id] = change.doc.metadata
+                this.references[change.doc.id] = change.doc.ref
+              }
+              if (change.type === "removed") {
+                this.watchers[change.doc.id]()
+                this.$delete(this.watchers, change.doc.id)
+                this.$delete(this.data, change.doc.id)
+                this.$delete(this.oldData, change.doc.id)
+                this.$delete(this.metadata, change.doc.id)
+                this.$delete(this.references, change.doc.id)
+              }
+            })
+          } else this.downloadSkips--
+        },
+      },
+    })
+  }
+
+  get metadata () {
+    return this._vue.metadata
+  }
+  get docs () {
+    const data = this._vue.data
+    return this._vue.ids ? this._vue.ids.map(id => ({
+      id,
+      data: function () { return data[id] },
+      metadata: this._vue.metadata[id],
+    })) : null
+  }
+
+  destroy () {
+    this._vue.$destroy()
+  }
+}
+
+export default function crossfire (reference, options) {
+  if (!reference) throw new Error('No reference provided')
+  const cfClass = reference.type === 'document' ? Crossfire : CrossfireQuery
+  return new cfClass(reference, options)
 }
