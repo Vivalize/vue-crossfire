@@ -28,6 +28,8 @@ This returns a live snapshot of the provided Firestore reference, structured ide
 
 Every instance of document data is binded two way. Mutating the document data will instantly update it in Firestore as well. (Before the initial snapshot of the reference is received, .data() and .docs will be undefined. You can access .loading to see if the initial state has been received yet). Any remote changes to the data in Firestore will instantly update the local object as well.
 
+Once you're done with the documents, call ```.destroy()``` on the instance to stop listening to the document/collection
+
 ```js
 import crossfire from 'vue-crossfire'
 
@@ -96,6 +98,10 @@ Whenever a document is to be updated in firestore, the data to be saved will ins
     created: function () {
       this.docSync = crossfire(doc(db, 'someCollection', 'docID'))
       this.querySync = crossfire(query(collection(db, 'someCollection'), where('author', '==', 'uuid')))
+    },
+    destroyed: function () {
+      this.docSync.destroy()
+      this.querySync.destroy()
     },
   }
 </script>
